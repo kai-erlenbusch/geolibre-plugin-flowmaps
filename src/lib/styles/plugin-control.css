@@ -326,3 +326,47 @@
   background: var(--pc-border);
   margin: 12px 0;
 }
+
+/* Demo right-sidebar panel body (see src/lib/geolibre/right-panel.ts). The host
+   provides the dock chrome and theme; the plugin only styles its own content. */
+.geolibre-plugin-right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.geolibre-plugin-right-panel h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.geolibre-plugin-right-panel p {
+  margin: 0;
+  opacity: 0.85;
+}
+
+/* Demo floating panel body (see src/lib/geolibre/floating-panel.ts). The host
+   provides the draggable card chrome and theme; the plugin styles its body. */
+.geolibre-plugin-floating-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.geolibre-plugin-floating-panel h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.geolibre-plugin-floating-panel p {
+  margin: 0;
+  opacity: 0.85;
+}

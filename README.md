@@ -10,7 +10,7 @@ A template for creating GeoLibre Desktop plugins backed by MapLibre GL JS contro
 ## Features
 
 - **GeoLibre Bundle Output** - Builds a zip with root `plugin.json`, bundled ESM, and CSS for GeoLibre Desktop
-- **GeoLibre Host Contract** - Typed `GeoLibreAppAPI`/`GeoLibrePlugin` contract, URL deep-linking, native-layer registration, and a one-step `install:geolibre`
+- **GeoLibre Host Contract** - Typed `GeoLibreAppAPI`/`GeoLibrePlugin` contract, URL deep-linking, native-layer registration, native UI surfaces (right-sidebar panels, top toolbar menus, floating panels), and a one-step `install:geolibre`
 - **TypeScript Support** - Full TypeScript support with type definitions
 - **React Integration** - React wrapper component and custom hooks
 - **IControl Implementation** - Implements MapLibre's IControl interface
@@ -121,6 +121,19 @@ does not provide them.
 | `resolvePluginAssetUrl`         | no       | Resolve a fetchable URL for an asset bundled in the plugin |
 | `registerExternalNativeLayer`   | no       | Hand the host a dataset to render as a native layer     |
 | `unregisterExternalNativeLayer` | no       | Remove a previously registered native layer             |
+| `registerRightPanel`            | no       | Register a native right-sidebar panel (returns unregister) |
+| `unregisterRightPanel`          | no       | Remove a registered right panel (closing it if active)  |
+| `openRightPanel`                | no       | Make a right panel the active workspace and expand it    |
+| `collapseRightPanel`            | no       | Collapse the active right panel to its rail              |
+| `closeRightPanel`               | no       | Close the active right panel and restore the Style panel |
+| `getActiveRightPanel`           | no       | Id of the active right panel, or `null`                 |
+| `registerToolbarMenu`           | no       | Add a top-level toolbar menu (returns unregister)       |
+| `unregisterToolbarMenu`         | no       | Remove a registered toolbar menu                        |
+| `registerFloatingPanel`         | no       | Register a floating map-overlay card (returns unregister) |
+| `unregisterFloatingPanel`       | no       | Remove a registered floating panel (closing it if open) |
+| `openFloatingPanel`             | no       | Open a floating panel (or bring it to the front)        |
+| `closeFloatingPanel`            | no       | Close an open floating panel                            |
+| `getOpenFloatingPanels`         | no       | Ids of open floating panels, in stacking order          |
 
 ### Plugin lifecycle hooks (`GeoLibrePlugin`)
 
@@ -157,6 +170,97 @@ options; `PluginControl.loadFromUrl` shows the end-to-end pattern, and the
 control unregisters its layers automatically when removed. Outside GeoLibre the
 callbacks default to no-ops, so the control still works as a standalone MapLibre
 control.
+
+### Right sidebar panel
+
+When the host exposes `registerRightPanel`, a plugin can register a native
+right-sidebar panel that docks beside GeoLibre's built-in Style panel and
+behaves like a first-class part of the workspace, instead of emulating one with
+a fixed overlay. The host renders the panel chrome (a header with collapse and
+close buttons, a collapsible rail, and a resize handle); the plugin owns only
+the body via `render(container)`, using plain DOM so it never has to share the
+host's UI framework. Only one plugin right panel is the active right-side
+workspace at a time: while one is active GeoLibre collapses its Style panel to
+its rail and restores it when the plugin panel closes.
+
+The template wires a demonstration panel in `src/lib/geolibre/right-panel.ts`,
+opened from the plugin's `activate` hook and torn down in `deactivate`:
+
+```ts
+const unregister = app.registerRightPanel?.({
+  id: "my-workbench",
+  title: "Workbench",
+  defaultWidth: 320,
+  render(container) {
+    container.textContent = "Rendered by the plugin via registerRightPanel().";
+    return () => {
+      // optional cleanup, run on close/unregister
+    };
+  },
+});
+
+app.openRightPanel?.("my-workbench");     // make it the active workspace
+app.collapseRightPanel?.("my-workbench"); // collapse to the rail
+app.closeRightPanel?.("my-workbench");    // close and restore the Style panel
+```
+
+The container stays mounted across collapse, so any state in your DOM persists.
+The panel is a flex sibling of the map, so opening it shrinks the map view; no
+manual map padding is required. Remove `registerTemplateRightPanel` from
+`src/geolibre.ts` if your plugin only needs a map control.
+
+### Toolbar menu
+
+When the host exposes `registerToolbarMenu`, a plugin can add its own top-level
+menu button to the GeoLibre banner (beside Project / Edit / View / Plugins),
+with nested submenus and action items. Menu items typically open one of the
+plugin's panels. The template wires this in `src/lib/geolibre/toolbar-menu.ts`,
+opening the right panel and floating panel defined alongside it:
+
+```ts
+const unregister = app.registerToolbarMenu?.({
+  id: "my-plugin-menu",
+  label: "Template",
+  items: [
+    { id: "open", label: "Open workbench panel", onSelect: () => app.openRightPanel?.("...") },
+    { type: "submenu", id: "tools", label: "Tools", items: [
+      { id: "float", label: "Open floating tools", onSelect: () => app.openFloatingPanel?.("...") },
+    ] },
+    { type: "separator" },
+    { id: "close", label: "Close panels", onSelect: () => { /* ... */ } },
+  ],
+});
+```
+
+Each item is an action (`onSelect`, the default when `type` is omitted), a
+submenu (nested `items`), or a separator. Re-registering the same id replaces
+the menu, so you can rebuild it as your plugin's state changes.
+
+### Floating panel
+
+When the host exposes `registerFloatingPanel`, a plugin can show a draggable,
+closeable card overlaid on the map's top-left corner. Unlike the right panel (a
+single docked workspace that collapses the Style panel), several floating panels
+can be open at once and they do not shrink the map. The render contract is the
+same plain-DOM `render(container)`. The template registers one in
+`src/lib/geolibre/floating-panel.ts` and opens it from the toolbar menu:
+
+```ts
+const unregister = app.registerFloatingPanel?.({
+  id: "my-tools",
+  title: "Floating Tools",
+  defaultWidth: 280,
+  render(container) {
+    container.textContent = "Rendered by the plugin via registerFloatingPanel().";
+    return () => {
+      // optional cleanup, run on close/unregister
+    };
+  },
+});
+
+app.openFloatingPanel?.("my-tools");   // open (or bring to front)
+app.closeFloatingPanel?.("my-tools");  // close
+```
 
 ### Bundling plugin-local assets
 

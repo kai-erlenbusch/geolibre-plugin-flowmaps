@@ -21,7 +21,28 @@ export type {
   GeoLibreNativeLayerRegistration,
   GeoLibreNativeLayerStyle,
   GeoLibreFeatureCollection,
+  GeoLibreRightPanelRegistration,
+  GeoLibreToolbarMenu,
+  GeoLibreToolbarMenuItem,
+  GeoLibreToolbarMenuAction,
+  GeoLibreToolbarSubmenu,
+  GeoLibreToolbarSeparator,
+  GeoLibreFloatingPanelRegistration,
 } from './lib/geolibre/host-api';
+
+// GeoLibre plugin UI surface demonstrations
+export {
+  RIGHT_PANEL_ID,
+  registerTemplateRightPanel,
+} from './lib/geolibre/right-panel';
+export {
+  FLOATING_PANEL_ID,
+  registerTemplateFloatingPanel,
+} from './lib/geolibre/floating-panel';
+export {
+  TOOLBAR_MENU_ID,
+  registerTemplateToolbarMenu,
+} from './lib/geolibre/toolbar-menu';
 
 // Deep-linking helpers
 export {
