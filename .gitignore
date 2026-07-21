@@ -38,3 +38,8 @@ dist-examples/
 .env.local
 .env.*.local
 .vite/
+
+# Datasets and Python Scripts
+*.csv
+*.py
+
