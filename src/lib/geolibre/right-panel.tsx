@@ -4,7 +4,7 @@ import type { GeoLibreAppAPI, GeoLibreControl } from "./host-api";
 import type { PluginControl } from "../core/PluginControl";
 import { sampleDatasets } from "../../samples";
 import type { PluginState } from "../core/types";
-import { mapSingleCsvToFlowmapData, mapDualCsvToFlowmapData, guessColumnMapping, ColumnMapping } from "../utils/csv-parser";
+import { mapSingleCsvToFlowmapData, guessColumnMapping, ColumnMapping } from "../utils/csv-parser";
 import { loadFileData } from "../utils/file-loader";
 import { Leva, useControls, folder, useCreateStore } from "leva";
 
@@ -44,6 +44,7 @@ const LevaControls = ({ state, updatePluginState, dataBounds }: { state: PluginS
 
   return (
     <div style={{ marginTop: 10, position: 'relative', zIndex: 1, paddingBottom: 20 }}>
+      {/* @ts-ignore - Leva store prop typing is missing in older versions but works in runtime */}
       <Leva store={store} flat fill titleBar={false} hideCopyButton />
     </div>
   );
