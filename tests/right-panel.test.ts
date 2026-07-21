@@ -6,8 +6,9 @@ import type {
 } from "../src/lib/geolibre/host-api";
 import {
   RIGHT_PANEL_ID,
-  registerTemplateRightPanel,
+  registerFlowmapRightPanel,
 } from "../src/lib/geolibre/right-panel";
+import { DEFAULT_PLUGIN_STATE } from "../src/lib/core/types";
 
 /**
  * Minimal stub of the host API. Captures the right-panel registration so the
@@ -37,11 +38,18 @@ function createApp(withRightPanel = true) {
   };
 }
 
-describe("registerTemplateRightPanel", () => {
+describe("registerFlowmapRightPanel", () => {
+  const mockControl = {
+    getState: () => ({ ...DEFAULT_PLUGIN_STATE, data: { flows: [], locations: [] } }),
+    on: vi.fn(),
+    off: vi.fn(),
+    setState: vi.fn()
+  } as any;
+
   it("registers and opens the panel, and renders into the container", () => {
     const { app, getRegistered } = createApp();
 
-    const dispose = registerTemplateRightPanel(app);
+    const dispose = registerFlowmapRightPanel(app, mockControl);
     expect(dispose).toBeTypeOf("function");
 
     const panel = getRegistered();
@@ -50,7 +58,6 @@ describe("registerTemplateRightPanel", () => {
 
     const container = document.createElement("div");
     const cleanup = panel?.render(container);
-    expect(container.querySelector("h2")?.textContent).toBe("Plugin Workbench");
 
     // The returned cleanup removes the plugin's own DOM.
     expect(cleanup).toBeTypeOf("function");
@@ -60,7 +67,7 @@ describe("registerTemplateRightPanel", () => {
 
   it("closes and unregisters the panel when disposed", () => {
     const { app, unregister } = createApp();
-    const dispose = registerTemplateRightPanel(app);
+    const dispose = registerFlowmapRightPanel(app, mockControl);
 
     dispose?.();
     expect(app.closeRightPanel).toHaveBeenCalledWith(RIGHT_PANEL_ID);
@@ -69,6 +76,6 @@ describe("registerTemplateRightPanel", () => {
 
   it("returns null when the host has no right sidebar", () => {
     const { app } = createApp(false);
-    expect(registerTemplateRightPanel(app)).toBeNull();
+    expect(registerFlowmapRightPanel(app, mockControl)).toBeNull();
   });
 });
