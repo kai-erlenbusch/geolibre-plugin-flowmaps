@@ -33,7 +33,7 @@ export type {
 // GeoLibre plugin UI surface demonstrations
 export {
   RIGHT_PANEL_ID,
-  registerTemplateRightPanel,
+  registerFlowmapRightPanel,
 } from './lib/geolibre/right-panel';
 export {
   FLOATING_PANEL_ID,

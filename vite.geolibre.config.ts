@@ -43,6 +43,11 @@ export default defineConfig({
       "@": resolve(__dirname, "src"),
     },
   },
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("production"),
+    "globalThis.deck.VERSION": JSON.stringify("8.9.36"),
+    "globalThis.luma.VERSION": JSON.stringify("8.5.21")
+  },
   build: {
     lib: {
       entry: resolve(__dirname, "src/geolibre.ts"),
@@ -61,5 +66,15 @@ export default defineConfig({
     sourcemap: false,
     minify: false,
   },
-  // plugins: [bundlePluginAssets()], // enable with the recipe above
+  plugins: [
+    {
+      name: "remove-deck-version-check",
+      transform(code, id) {
+        if (code.includes("multiple versions detected")) {
+          // completely remove the throw statement
+          return code.replace(/throw new Error\([\s\S]*?multiple versions detected[\s\S]*?\);/g, "console.warn('version check bypassed');");
+        }
+      }
+    }
+  ]
 });

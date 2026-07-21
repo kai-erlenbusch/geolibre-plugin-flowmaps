@@ -1,8 +1,8 @@
 {
-  "id": "geolibre-plugin-template",
-  "name": "GeoLibre Plugin Template",
+  "id": "geolibre-plugin-flowmaps",
+  "name": "Flowmaps.gl",
   "version": "0.1.0",
   "entry": "dist/index.js",
-  "description": "A starter GeoLibre plugin bundle with a MapLibre control.",
+  "description": "A plugin for visualizing origin-destination data using flowmap.gl.",
   "style": "dist/style.css"
 }

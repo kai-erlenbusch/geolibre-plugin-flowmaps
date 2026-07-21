@@ -1,12 +1,21 @@
-import type { IControl, Map as MapLibreMap } from 'maplibre-gl';
+import { IControl, Map as MapLibreMap, Popup } from 'maplibre-gl';
 import type {
   PluginControlOptions,
   PluginState,
   PluginControlEvent,
   PluginControlEventHandler,
 } from './types';
+import { DEFAULT_PLUGIN_STATE } from './types';
 import type { DeepLinkConsumer } from '../utils/deep-link';
 import type { GeoLibreNativeLayerRegistration } from '../geolibre/host-api';
+// @ts-ignore
+import { MapboxOverlay } from '@deck.gl/mapbox';
+// @ts-ignore
+import { FlowmapLayer, PickingType } from '@flowmap.gl/layers';
+
+import * as React from 'react';
+import { createRoot, Root } from 'react-dom/client';
+import { TimelineOverlay } from '../components/TimelineOverlay';
 
 /**
  * Default options for the PluginControl.
@@ -24,6 +33,7 @@ const DEFAULT_OPTIONS: Required<PluginControlOptions> = {
   pickFiles: () => Promise.resolve(null),
   registerNativeLayer: () => undefined,
   unregisterNativeLayer: () => undefined,
+  fitBounds: () => undefined,
 };
 
 /**
@@ -33,16 +43,6 @@ type EventHandlersMap = globalThis.Map<PluginControlEvent, Set<PluginControlEven
 
 /**
  * A template MapLibre GL control that can be customized for various plugin needs.
- *
- * @example
- * ```typescript
- * const control = new PluginControl({
- *   title: 'My Custom Control',
- *   collapsed: false,
- *   panelWidth: 320,
- * });
- * map.addControl(control, 'top-right');
- * ```
  */
 export class PluginControl implements IControl, DeepLinkConsumer {
   private _map?: MapLibreMap;
@@ -54,66 +54,63 @@ export class PluginControl implements IControl, DeepLinkConsumer {
   private _state: PluginState;
   private _eventHandlers: EventHandlersMap = new globalThis.Map();
 
-  // Ids of native layers this control has registered with the host, so they can
-  // be unregistered when the control is removed.
   private _registeredNativeLayerIds: string[] = [];
 
-  // Panel positioning handlers
   private _resizeHandler: (() => void) | null = null;
   private _mapResizeHandler: (() => void) | null = null;
   private _clickOutsideHandler: ((e: MouseEvent) => void) | null = null;
 
-  /**
-   * Creates a new PluginControl instance.
-   *
-   * @param options - Configuration options for the control
-   */
+  private _deckOverlay?: MapboxOverlay;
+  private _popup?: Popup;
+
+  private _timelineContainer?: HTMLElement;
+  private _timelineRoot?: Root;
+
   constructor(options?: Partial<PluginControlOptions>) {
     this._options = { ...DEFAULT_OPTIONS, ...options };
-    this._state = {
-      collapsed: this._options.collapsed,
-      panelWidth: this._options.panelWidth,
-      data: {},
-    };
+    this._state = { ...DEFAULT_PLUGIN_STATE };
   }
 
-  /**
-   * Called when the control is added to the map.
-   * Implements the IControl interface.
-   *
-   * @param map - The MapLibre GL map instance
-   * @returns The control's container element
-   */
   onAdd(map: MapLibreMap): HTMLElement {
     this._map = map;
     this._mapContainer = map.getContainer();
     this._container = this._createContainer();
     this._panel = this._createPanel();
 
-    // Append panel to map container for independent positioning (avoids overlap with other controls)
     this._mapContainer.appendChild(this._panel);
 
-    // Setup event listeners for panel positioning and click-outside
     this._setupEventListeners();
 
-    // Set initial panel state
     if (!this._state.collapsed) {
       this._panel.classList.add('expanded');
-      // Update position after control is added to DOM
       requestAnimationFrame(() => {
         this._updatePanelPosition();
       });
     }
 
+    this._deckOverlay = new MapboxOverlay({
+      interleaved: true,
+      layers: []
+    });
+    map.addControl(this._deckOverlay as unknown as IControl);
+
+    this._popup = new Popup({
+      closeButton: false,
+      closeOnClick: false,
+      className: 'flowmap-tooltip'
+    });
+
+    this._timelineContainer = document.createElement('div');
+    this._mapContainer.appendChild(this._timelineContainer);
+    this._timelineRoot = createRoot(this._timelineContainer);
+
+    this._updateFlowmapLayer();
+    this._renderTimeline();
+
     return this._container;
   }
 
-  /**
-   * Called when the control is removed from the map.
-   * Implements the IControl interface.
-   */
   onRemove(): void {
-    // Remove event listeners
     if (this._resizeHandler) {
       window.removeEventListener('resize', this._resizeHandler);
       this._resizeHandler = null;
@@ -127,45 +124,248 @@ export class PluginControl implements IControl, DeepLinkConsumer {
       this._clickOutsideHandler = null;
     }
 
-    // Hand any native layers this control registered back to the host.
     this._clearNativeLayers();
 
-    // Remove panel from map container
     this._panel?.parentNode?.removeChild(this._panel);
-
-    // Remove button container from control stack
     this._container?.parentNode?.removeChild(this._container);
+
+    if (this._deckOverlay && this._map) {
+      this._map.removeControl(this._deckOverlay as unknown as IControl);
+    }
+    
+    if (this._popup) {
+      this._popup.remove();
+      this._popup = undefined;
+    }
 
     this._map = undefined;
     this._mapContainer = undefined;
     this._container = undefined;
     this._panel = undefined;
     this._status = undefined;
+    this._deckOverlay = undefined;
+    
+    if (this._timelineRoot) {
+      this._timelineRoot.unmount();
+      this._timelineRoot = undefined;
+    }
+    if (this._timelineContainer) {
+      this._timelineContainer.parentNode?.removeChild(this._timelineContainer);
+      this._timelineContainer = undefined;
+    }
+    
     this._eventHandlers.clear();
   }
 
-  /**
-   * Gets the current state of the control.
-   *
-   * @returns The current plugin state
-   */
   getState(): PluginState {
     return { ...this._state };
   }
 
-  /**
-   * Updates the control state.
-   *
-   * @param newState - Partial state to merge with current state
-   */
   setState(newState: Partial<PluginState>): void {
+    const dataChanged = newState.data !== undefined && newState.data !== this._state.data;
+    
     this._state = { ...this._state, ...newState };
     this._emit('statechange');
+    
+    if (dataChanged && this._map && this._state.data) {
+      this._fitToData();
+      
+      // Unmount timeline immediately to prevent stale intervals from polluting the new state
+      if (this._timelineRoot) {
+        this._timelineRoot.render(null);
+      }
+      if (this._timelineContainer) {
+        this._timelineContainer.style.display = 'none';
+      }
+      
+      // Delay initial render slightly to ensure map bounds have started changing
+      setTimeout(() => {
+        this._updateFlowmapLayer();
+        this._renderTimeline();
+      }, 200);
+      return;
+    }
+    
+    this._updateFlowmapLayer();
+    this._renderTimeline();
   }
 
-  /**
-   * Toggles the collapsed state of the control panel.
-   */
+  private _renderTimeline() {
+    if (this._timelineContainer) {
+      this._timelineContainer.style.display = 'block';
+    }
+    if (this._timelineRoot) {
+      this._timelineRoot.render(
+        React.createElement(TimelineOverlay, {
+          state: this.getState(),
+          updatePluginState: (updates: Partial<PluginState>) => this.setState(updates)
+        })
+      );
+    }
+  }
+
+  private _fitToData() {
+    const locations = (this._state.data as any)?.locations;
+    if (!this._map || !locations || locations.length === 0) return;
+    
+    let minLng = Infinity;
+    let minLat = Infinity;
+    let maxLng = -Infinity;
+    let maxLat = -Infinity;
+    
+    for (const loc of locations) {
+      const lng = Number(loc.lon);
+      const lat = Number(loc.lat);
+      if (lng < minLng) minLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lng > maxLng) maxLng = lng;
+      if (lat > maxLat) maxLat = lat;
+    }
+    
+    if (minLng < Infinity && maxLng > -Infinity && minLat < Infinity && maxLat > -Infinity) {
+      try {
+        if (this._options.fitBounds) {
+          this._options.fitBounds([minLng, minLat, maxLng, maxLat]);
+        } else if (this._map) {
+          const centerLng = (minLng + maxLng) / 2;
+          const centerLat = (minLat + maxLat) / 2;
+          this._map.flyTo({
+            center: [centerLng, centerLat],
+            zoom: 6,
+            duration: 2000
+          });
+        }
+      } catch (err: any) {
+        console.error("GeoLibre Flowmaps: Error flying to bounds:", err);
+      }
+    }
+  }
+
+  private _updateFlowmapLayer() {
+    if (!this._deckOverlay) return;
+    
+    if (this._state.data && this._state.data.locations && this._state.data.flows) {
+      const { data, ...config } = this._state;
+
+      let filteredFlows = data.flows;
+      if (config.volumeFilter) {
+        filteredFlows = filteredFlows.filter((f: any) => f.count >= config.volumeFilter![0] && f.count <= config.volumeFilter![1]);
+      }
+      if (config.timeFilter) {
+        filteredFlows = filteredFlows.filter((f: any) => f.time >= config.timeFilter![0] && f.time <= config.timeFilter![1]);
+      }
+
+      const layerProps = {
+        id: 'flowmap-layer',
+        data: { locations: data.locations, flows: filteredFlows },
+        opacity: config.opacity,
+        pickable: true,
+        darkMode: config.darkMode,
+        colorScheme: config.colorScheme,
+        fadeAmount: config.fadeAmount,
+        fadeEnabled: config.fadeEnabled,
+        fadeOpacityEnabled: config.fadeOpacityEnabled,
+        locationsEnabled: config.locationsEnabled,
+        locationTotalsEnabled: config.locationTotalsEnabled,
+        locationLabelsEnabled: config.locationLabelsEnabled,
+        flowLinesRenderingMode: config.flowLinesRenderingMode,
+        clusteringEnabled: config.clusteringEnabled,
+        clusteringMethod: config.clusteringMethod,
+        clusteringAuto: config.clusteringAuto,
+        clusteringLevel: config.clusteringLevel,
+        adaptiveScalesEnabled: config.adaptiveScalesEnabled,
+        highlightColor: config.highlightColor,
+        maxTopFlowsDisplayNum: config.maxTopFlowsDisplayNum,
+        flowEndpointsInViewportMode: config.flowEndpointsInViewportMode,
+        flowLineThicknessScale: config.flowLineThicknessScale,
+        flowLineCurviness: config.flowLineCurviness,
+        scaleLock: {enabled: config.scaleLockEnabled},
+        getLocationId: (loc: any) => String(loc.id),
+        getLocationLat: (loc: any) => Number(loc.lat),
+        getLocationLon: (loc: any) => Number(loc.lon),
+        getFlowOriginId: (flow: any) => String(flow.origin),
+        getLocationName: (loc: any) => loc.name || String(loc.id),
+        getFlowDestId: (flow: any) => String(flow.dest),
+        getFlowMagnitude: (flow: any) => Number(flow.count || 1),
+        onHover: (info: any) => this._onHover(info),
+      };
+
+      const layer = new FlowmapLayer(layerProps as any);
+        
+      this._deckOverlay.setProps({
+        layers: [layer]
+      });
+      this._map?.triggerRepaint();
+      this._setStatus(`Rendered ${data.locations.length} locs, ${data.flows.length} flows.`);
+    } else {
+      this._deckOverlay.setProps({ layers: [] });
+      this._map?.triggerRepaint();
+    }
+  }
+
+  private _onHover(info: any) {
+    if (!this._map || !this._popup) return;
+
+    if (!info) {
+      this._popup.remove();
+      return;
+    }
+    
+    const {object} = info;
+    if (!object) {
+      this._popup.remove();
+      return;
+    }
+    
+    if (info.coordinate) {
+      const container = document.createElement('div');
+      container.style.padding = '4px';
+      container.style.color = '#000';
+
+      if (object.type === PickingType.LOCATION) {
+        const title = document.createElement('div');
+        const strong = document.createElement('strong');
+        strong.textContent = object.name || object.id;
+        title.appendChild(strong);
+        container.appendChild(title);
+
+        const inc = document.createElement('div');
+        inc.textContent = `Incoming trips: ${object.totals?.incomingCount || 0}`;
+        container.appendChild(inc);
+
+        const out = document.createElement('div');
+        out.textContent = `Outgoing trips: ${object.totals?.outgoingCount || 0}`;
+        container.appendChild(out);
+
+        const int = document.createElement('div');
+        int.textContent = `Internal/round trips: ${object.totals?.internalCount || 0}`;
+        container.appendChild(int);
+      } else if (object.type === PickingType.FLOW) {
+        const title = document.createElement('div');
+        
+        const orgStrong = document.createElement('strong');
+        orgStrong.textContent = object.origin.id;
+        
+        const arrow = document.createTextNode(' \u2192 ');
+        
+        const destStrong = document.createElement('strong');
+        destStrong.textContent = object.dest.id;
+        
+        title.appendChild(orgStrong);
+        title.appendChild(arrow);
+        title.appendChild(destStrong);
+        container.appendChild(title);
+
+        const vol = document.createElement('div');
+        vol.textContent = `Volume: ${object.count}`;
+        container.appendChild(vol);
+      } else {
+        container.textContent = 'Unknown object';
+      }
+      this._popup.setLngLat(info.coordinate).setDOMContent(container).addTo(this._map);
+    }
+  }
+
   toggle(): void {
     this._state.collapsed = !this._state.collapsed;
 
@@ -183,30 +383,18 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     this._emit('statechange');
   }
 
-  /**
-   * Expands the control panel.
-   */
   expand(): void {
     if (this._state.collapsed) {
       this.toggle();
     }
   }
 
-  /**
-   * Collapses the control panel.
-   */
   collapse(): void {
     if (!this._state.collapsed) {
       this.toggle();
     }
   }
 
-  /**
-   * Registers an event handler.
-   *
-   * @param event - The event type to listen for
-   * @param handler - The callback function
-   */
   on(event: PluginControlEvent, handler: PluginControlEventHandler): void {
     if (!this._eventHandlers.has(event)) {
       this._eventHandlers.set(event, new Set());
@@ -214,44 +402,18 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     this._eventHandlers.get(event)!.add(handler);
   }
 
-  /**
-   * Removes an event handler.
-   *
-   * @param event - The event type
-   * @param handler - The callback function to remove
-   */
   off(event: PluginControlEvent, handler: PluginControlEventHandler): void {
     this._eventHandlers.get(event)?.delete(handler);
   }
 
-  /**
-   * Gets the map instance.
-   *
-   * @returns The MapLibre GL map instance or undefined if not added to a map
-   */
   getMap(): MapLibreMap | undefined {
     return this._map;
   }
 
-  /**
-   * Gets the control container element.
-   *
-   * @returns The container element or undefined if not added to a map
-   */
   getContainer(): HTMLElement | undefined {
     return this._container;
   }
 
-  /**
-   * Open the host's directory picker and act on the chosen files.
-   *
-   * Calls the `pickFiles` option, which the GeoLibre wrapper binds to
-   * `app.pickLocalDirectoryFiles`. Outside GeoLibre (or on a host without file
-   * access) it resolves to `null`. Replace the body with your own handling of
-   * the returned files.
-   *
-   * @returns The selected files, or `null` if the picker was unavailable or cancelled
-   */
   async openFiles(): Promise<File[] | null> {
     try {
       const files = await this._options.pickFiles();
@@ -267,21 +429,10 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     }
   }
 
-  /**
-   * Load plugin data referenced by a deep link.
-   *
-   * Satisfies {@link DeepLinkConsumer}: the GeoLibre wrapper routes a
-   * `?plugin-data=<value>` URL parameter here. This template implementation just
-   * records the value and demonstrates handing a native layer to the host;
-   * replace it with your own fetch-and-render logic.
-   *
-   * @param value - The deep-link value (for example, a dataset URL)
-   */
   async loadFromUrl(value: string): Promise<void> {
     this.setState({ data: { ...this._state.data, loadedUrl: value } });
     this._setStatus(`Loaded: ${value}`);
 
-    // Demonstrate handing a dataset to GeoLibre as a native layer it owns.
     this._registerNativeLayer({
       id: 'plugin-template-data',
       name: 'Plugin data',
@@ -293,12 +444,6 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     });
   }
 
-  /**
-   * Register a native layer with the host, tracking its id so it can be removed
-   * when the control is torn down. No-ops outside GeoLibre.
-   *
-   * @param layer - The native layer registration payload
-   */
   private _registerNativeLayer(layer: GeoLibreNativeLayerRegistration): void {
     try {
       this._options.registerNativeLayer(layer);
@@ -310,39 +455,22 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     }
   }
 
-  /**
-   * Unregister every native layer this control registered with the host.
-   */
   private _clearNativeLayers(): void {
-    // Reset bookkeeping up front so internal state stays consistent even if a
-    // host callback throws partway through teardown.
     const ids = [...this._registeredNativeLayerIds];
     this._registeredNativeLayerIds = [];
     for (const id of ids) {
       try {
         this._options.unregisterNativeLayer(id);
-      } catch {
-        // Keep clearing the remaining ids.
-      }
+      } catch {}
     }
   }
 
-  /**
-   * Update the status line in the panel, if it is mounted.
-   *
-   * @param message - The status text to display
-   */
   private _setStatus(message: string): void {
     if (this._status) {
       this._status.textContent = message;
     }
   }
 
-  /**
-   * Emits an event to all registered handlers.
-   *
-   * @param event - The event type to emit
-   */
   private _emit(event: PluginControlEvent): void {
     const handlers = this._eventHandlers.get(event);
     if (handlers) {
@@ -351,19 +479,12 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     }
   }
 
-  /**
-   * Creates the main container element for the control.
-   * Contains a toggle button (29x29) matching navigation control size.
-   *
-   * @returns The container element
-   */
   private _createContainer(): HTMLElement {
     const container = document.createElement('div');
     container.className = `maplibregl-ctrl maplibregl-ctrl-group plugin-control${
       this._options.className ? ` ${this._options.className}` : ''
     }`;
 
-    // Create toggle button (29x29 to match navigation control)
     const toggleBtn = document.createElement('button');
     toggleBtn.className = 'plugin-control-toggle';
     toggleBtn.type = 'button';
@@ -381,22 +502,14 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     toggleBtn.addEventListener('click', () => this.toggle());
 
     container.appendChild(toggleBtn);
-
     return container;
   }
 
-  /**
-   * Creates the panel element with header and content areas.
-   * Panel is positioned as a dropdown below the toggle button.
-   *
-   * @returns The panel element
-   */
   private _createPanel(): HTMLElement {
     const panel = document.createElement('div');
     panel.className = 'plugin-control-panel';
     panel.style.width = `${this._options.panelWidth}px`;
 
-    // Create header with title and close button
     const header = document.createElement('div');
     header.className = 'plugin-control-header';
 
@@ -414,17 +527,13 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     header.appendChild(title);
     header.appendChild(closeBtn);
 
-    // Create content area
     const content = document.createElement('div');
     content.className = 'plugin-control-content';
 
     const placeholder = document.createElement('p');
     placeholder.className = 'plugin-control-placeholder';
-    placeholder.textContent = 'Add your custom plugin content here.';
+    placeholder.textContent = 'Flowmaps controls are located in the right panel. Use the toolbar menu to open the panel if it is closed.';
 
-    // Demonstrate the GeoLibre host callbacks end to end. These buttons drive
-    // `openFiles()` and `loadFromUrl()`, which call the host-provided pickers
-    // and native-layer registration. Outside GeoLibre they fall back to no-ops.
     const actions = document.createElement('div');
     actions.className = 'plugin-control-actions';
 
@@ -453,11 +562,7 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     return panel;
   }
 
-  /**
-   * Setup event listeners for panel positioning and click-outside behavior.
-   */
   private _setupEventListeners(): void {
-    // Click outside to close (check both container and panel since they're now separate)
     this._clickOutsideHandler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
@@ -471,93 +576,42 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     };
     document.addEventListener('click', this._clickOutsideHandler);
 
-    // Update panel position on window resize
     this._resizeHandler = () => {
       if (!this._state.collapsed) {
         this._updatePanelPosition();
       }
     };
     window.addEventListener('resize', this._resizeHandler);
-
-    // Update panel position on map resize (e.g., sidebar toggle)
-    this._mapResizeHandler = () => {
-      if (!this._state.collapsed) {
-        this._updatePanelPosition();
-      }
-    };
-    this._map?.on('resize', this._mapResizeHandler);
   }
 
-  /**
-   * Detect which corner the control is positioned in.
-   *
-   * @returns The position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
-   */
-  private _getControlPosition(): 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' {
-    const parent = this._container?.parentElement;
-    if (!parent) return 'top-right'; // Default
-
-    if (parent.classList.contains('maplibregl-ctrl-top-left')) return 'top-left';
-    if (parent.classList.contains('maplibregl-ctrl-top-right')) return 'top-right';
-    if (parent.classList.contains('maplibregl-ctrl-bottom-left')) return 'bottom-left';
-    if (parent.classList.contains('maplibregl-ctrl-bottom-right')) return 'bottom-right';
-
-    return 'top-right'; // Default
-  }
-
-  /**
-   * Update the panel position based on button location and control corner.
-   * Positions the panel next to the button, expanding in the appropriate direction.
-   */
   private _updatePanelPosition(): void {
     if (!this._container || !this._panel || !this._mapContainer) return;
 
-    // Get the toggle button (first child of container)
-    const button = this._container.querySelector('.plugin-control-toggle');
-    if (!button) return;
-
-    const buttonRect = button.getBoundingClientRect();
+    const btnRect = this._container.getBoundingClientRect();
     const mapRect = this._mapContainer.getBoundingClientRect();
-    const position = this._getControlPosition();
+    const panelRect = this._panel.getBoundingClientRect();
 
-    // Calculate button position relative to map container
-    const buttonTop = buttonRect.top - mapRect.top;
-    const buttonBottom = mapRect.bottom - buttonRect.bottom;
-    const buttonLeft = buttonRect.left - mapRect.left;
-    const buttonRight = mapRect.right - buttonRect.right;
-
-    const panelGap = 5; // Gap between button and panel
-
-    // Reset all positioning
-    this._panel.style.top = '';
-    this._panel.style.bottom = '';
-    this._panel.style.left = '';
-    this._panel.style.right = '';
-
-    switch (position) {
-      case 'top-left':
-        // Panel expands down and to the right
-        this._panel.style.top = `${buttonTop + buttonRect.height + panelGap}px`;
-        this._panel.style.left = `${buttonLeft}px`;
-        break;
-
-      case 'top-right':
-        // Panel expands down and to the left
-        this._panel.style.top = `${buttonTop + buttonRect.height + panelGap}px`;
-        this._panel.style.right = `${buttonRight}px`;
-        break;
-
-      case 'bottom-left':
-        // Panel expands up and to the right
-        this._panel.style.bottom = `${buttonBottom + buttonRect.height + panelGap}px`;
-        this._panel.style.left = `${buttonLeft}px`;
-        break;
-
-      case 'bottom-right':
-        // Panel expands up and to the left
-        this._panel.style.bottom = `${buttonBottom + buttonRect.height + panelGap}px`;
-        this._panel.style.right = `${buttonRight}px`;
-        break;
+    const padding = 10;
+    
+    // Position relative to the map container, matching standard MapLibre control placement
+    const btnTop = btnRect.top - mapRect.top;
+    let top = btnTop;
+    let left = 0;
+    
+    // Auto-detect horizontal placement based on the button position
+    // If the button is on the right side of the map container, open panel to the left
+    if (btnRect.left - mapRect.left > mapRect.width / 2) {
+      left = btnRect.left - mapRect.left - this._options.panelWidth - padding;
+    } else {
+      // If the button is on the left side, open panel to the right
+      left = btnRect.right - mapRect.left + padding;
     }
+
+    if (top + panelRect.height > mapRect.height - padding) {
+      top = mapRect.height - panelRect.height - padding;
+    }
+
+    this._panel.style.top = `${Math.max(padding, top)}px`;
+    this._panel.style.left = `${Math.max(padding, left)}px`;
   }
 }

@@ -56,6 +56,11 @@ export interface PluginControlOptions {
    * wrapper to `app.unregisterExternalNativeLayer`; defaults to a no-op.
    */
   unregisterNativeLayer?: (id: string) => void;
+
+  /**
+   * Host callback to fit the map bounds.
+   */
+  fitBounds?: (bounds: [number, number, number, number]) => void;
 }
 
 /**
@@ -73,10 +78,67 @@ export interface PluginState {
   panelWidth: number;
 
   /**
-   * Any custom state data
+   * Any custom state data (holds flowmap raw data)
    */
-  data?: Record<string, unknown>;
+  data?: any;
+
+  colorScheme: string;
+  highlightColor: string;
+  
+  // UI configurations
+  darkMode: boolean;
+  flowLineThicknessScale: number;
+  adaptiveScalesEnabled: boolean;
+  locationsEnabled: boolean;
+  locationTotalsEnabled: boolean;
+  locationLabelsEnabled: boolean;
+  flowEndpointsInViewportMode: string;
+  maxTopFlowsDisplayNum: number;
+  volumeFilter?: [number, number];
+  timeFilter?: [number, number];
+  flowLinesRenderingMode: string;
+  flowLineCurviness: number;
+  scaleLockEnabled: boolean;
+  opacity: number;
+  fadeEnabled: boolean;
+  fadeOpacityEnabled: boolean;
+  fadeAmount: number;
+  clusteringEnabled: boolean;
+  clusteringMethod: string;
+  clusteringAuto: boolean;
+  clusteringLevel: number;
+  
+  // v8 back-compat features
+  animationEnabled: boolean;
 }
+
+export const DEFAULT_PLUGIN_STATE: PluginState = {
+  collapsed: false,
+  panelWidth: 320,
+  data: undefined,
+  colorScheme: 'Teal',
+  highlightColor: '#ff9b29',
+  darkMode: false,
+  flowLineThicknessScale: 1,
+  adaptiveScalesEnabled: false,
+  locationsEnabled: true,
+  locationTotalsEnabled: true,
+  locationLabelsEnabled: false,
+  flowEndpointsInViewportMode: 'any',
+  maxTopFlowsDisplayNum: 5000,
+  flowLinesRenderingMode: 'lines',
+  flowLineCurviness: 0.25,
+  scaleLockEnabled: false,
+  opacity: 1,
+  fadeEnabled: false,
+  fadeOpacityEnabled: false,
+  fadeAmount: 50,
+  clusteringEnabled: false,
+  clusteringMethod: 'HCA',
+  clusteringAuto: false,
+  clusteringLevel: 5,
+  animationEnabled: false,
+};
 
 /**
  * Props for the React wrapper component

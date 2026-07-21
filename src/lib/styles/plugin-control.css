@@ -15,7 +15,8 @@
  * so it cannot inherit variables scoped only to `.plugin-control`.
  */
 .plugin-control,
-.plugin-control-panel {
+.plugin-control-panel,
+.flowmaps-panel {
   --pc-bg: #fff;
   --pc-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
   --pc-icon: #1f2a37;
@@ -39,7 +40,8 @@
 /* Dark theme: follows the user's system preference */
 @media (prefers-color-scheme: dark) {
   .plugin-control,
-  .plugin-control-panel {
+  .plugin-control-panel,
+  .flowmaps-panel {
     --pc-bg: #1f2937;
     --pc-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
     --pc-icon: #e5e7eb;
@@ -369,4 +371,156 @@
 .geolibre-plugin-floating-panel p {
   margin: 0;
   opacity: 0.85;
+}
+
+/* --- Flowmaps Premium UI Styles --- */
+
+.flowmaps-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.flowmaps-panel h2 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-group label {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.select-input {
+  background: var(--pc-input-bg);
+  color: var(--pc-input-text);
+  border: 1px solid var(--pc-input-border);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 13px;
+  outline: none;
+}
+
+.slider-input {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--pc-input-border);
+  outline: none;
+}
+
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--pc-accent);
+  cursor: pointer;
+}
+
+.slider-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--pc-accent);
+  cursor: pointer;
+}
+
+/* Drop Zone */
+.drop-zone {
+  border: 2px dashed var(--pc-input-border);
+  border-radius: 6px;
+  padding: 24px;
+  text-align: center;
+  position: relative;
+  background: rgba(255, 255, 255, 0.02);
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.drop-zone:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.drop-zone input[type="file"] {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.drop-zone span {
+  font-size: 13px;
+  color: var(--pc-muted);
+}
+
+/* Toggle Switch */
+.toggle-group {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider.round {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--pc-input-border);
+  transition: .4s;
+  border-radius: 20px;
+}
+
+.slider.round:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider.round {
+  background-color: var(--pc-accent);
+}
+
+input:checked + .slider.round:before {
+  transform: translateX(16px);
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 12px;
+  margin: 0;
+}
+
+.success-text {
+  color: #10b981;
+  font-size: 12px;
+  margin: 0;
 }

@@ -1,14 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { PluginState } from '../core/types';
 
-/**
- * Default initial state for the plugin
- */
-const DEFAULT_STATE: PluginState = {
-  collapsed: true,
-  panelWidth: 300,
-  data: {},
-};
+import { DEFAULT_PLUGIN_STATE as DEFAULT_STATE } from '../core/types';
 
 /**
  * Custom hook for managing plugin state in React applications.

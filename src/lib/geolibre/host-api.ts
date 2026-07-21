@@ -215,6 +215,12 @@ export interface GeoLibreAppAPI<TControl extends GeoLibreControl = GeoLibreContr
   closeFloatingPanel?: (id: string) => void;
   /** Ids of the currently open floating panels, in stacking order. */
   getOpenFloatingPanels?: () => string[];
+  /** Get the current map projection. */
+  getMapProjection?: () => "globe" | "mercator";
+  /** Set the map projection. Note: deck.gl plugins typically require "mercator". */
+  setMapProjection?: (projection: "globe" | "mercator") => void;
+  /** Fit the map to the given bounds: [west, south, east, north] */
+  fitBounds?: (bounds: [number, number, number, number]) => void;
 }
 
 /**

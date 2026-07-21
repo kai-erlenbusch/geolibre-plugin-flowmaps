@@ -1,2 +1,3 @@
 /* Root styles for geolibre-plugin-template */
 @import "./lib/styles/plugin-control.css";
+@import "./lib/styles/right-panel.css";
