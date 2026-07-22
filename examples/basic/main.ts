@@ -26,6 +26,9 @@ map.on('load', () => {
     title: 'Flowmaps',
     collapsed: false,
     panelWidth: 300,
+    fitBounds: (bounds) => {
+      map.fitBounds(bounds, { padding: 50, duration: 1000 });
+    }
   });
 
   // Add control to the map
