@@ -153,7 +153,10 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
         let response = await fetch('/plugins/geolibre-plugin-flowmaps/dist/montreal-bixi-flat.csv');
         if (!response.ok) {
            response = await fetch('/plugins/geolibre-plugin-flowmaps/montreal-bixi-flat.csv');
-           if (!response.ok) throw new Error("Could not fetch local demo file");
+           if (!response.ok) {
+              response = await fetch('/geolibre-plugin-flowmaps/montreal-bixi-flat.csv');
+              if (!response.ok) throw new Error("Could not fetch local demo file");
+           }
         }
         const blob = await response.blob();
         const file = new File([blob], "montreal-bixi-flat.csv", { type: "text/csv" });
