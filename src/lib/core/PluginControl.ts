@@ -24,16 +24,12 @@ import { TimelineOverlay } from '../components/TimelineOverlay';
  * standalone MapLibre control. The GeoLibre wrapper (`src/geolibre.ts`) binds
  * them to the real host APIs when the plugin runs inside GeoLibre.
  */
-const DEFAULT_OPTIONS: Required<PluginControlOptions> = {
+const DEFAULT_OPTIONS: PluginControlOptions = {
   collapsed: true,
   position: 'top-right',
   title: 'Plugin Control',
   panelWidth: 300,
   className: '',
-  pickFiles: () => Promise.resolve(null),
-  registerNativeLayer: () => undefined,
-  unregisterNativeLayer: () => undefined,
-  fitBounds: () => undefined,
 };
 
 /**

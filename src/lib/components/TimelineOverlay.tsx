@@ -44,11 +44,17 @@ export function TimelineOverlay({ state, updatePluginState }: { state: PluginSta
   }, [state.data]);
 
   React.useEffect(() => {
-    if (timeData && (!state.timeFilter || state.timeFilter[0] < timeData.minTime || state.timeFilter[1] > timeData.maxTime)) {
-      const windowSize = Math.max(1, timeData.span * 0.1);
-      updatePluginState({ timeFilter: [timeData.minTime, timeData.minTime + windowSize] });
+    if (!timeData) return;
+    const tf = state.timeFilter;
+    if (!tf || tf[0] < timeData.minTime || tf[1] > timeData.maxTime) {
+      if (timeData.span === 0) {
+        updatePluginState({ timeFilter: [timeData.minTime, timeData.minTime] });
+      } else {
+        const windowSize = Math.max(1, timeData.span * 0.1);
+        updatePluginState({ timeFilter: [timeData.minTime, timeData.minTime + windowSize] });
+      }
     }
-  }, [timeData]);
+  }, [timeData, state.timeFilter, updatePluginState]);
 
   React.useEffect(() => {
     if (!isPlaying || !timeData) return;

@@ -39,11 +39,11 @@ map.on('load', () => {
       { id: '4', name: 'Sydney', lat: -33.8688, lon: 151.2093 }
     ],
     flows: [
-      { origin: '1', dest: '2', count: 2500, time: 0 },
-      { origin: '2', dest: '3', count: 1800, time: 0 },
-      { origin: '3', dest: '1', count: 1200, time: 0 },
-      { origin: '4', dest: '1', count: 3000, time: 0 },
-      { origin: '2', dest: '4', count: 900, time: 0 }
+      { origin: '1', dest: '2', count: 2500, time: 1000 },
+      { origin: '2', dest: '3', count: 1800, time: 2000 },
+      { origin: '3', dest: '1', count: 1200, time: 3000 },
+      { origin: '4', dest: '1', count: 3000, time: 4000 },
+      { origin: '2', dest: '4', count: 900, time: 5000 }
     ]
   };
 
