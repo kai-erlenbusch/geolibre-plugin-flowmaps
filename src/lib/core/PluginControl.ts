@@ -68,7 +68,10 @@ export class PluginControl implements IControl, DeepLinkConsumer {
 
   constructor(options?: Partial<PluginControlOptions>) {
     this._options = { ...DEFAULT_OPTIONS, ...options };
-    this._state = { ...DEFAULT_PLUGIN_STATE };
+    this._state = { 
+      ...DEFAULT_PLUGIN_STATE,
+      collapsed: this._options.collapsed 
+    };
   }
 
   onAdd(map: MapLibreMap): HTMLElement {
