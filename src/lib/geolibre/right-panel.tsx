@@ -51,7 +51,7 @@ const LevaControls = ({ state, updatePluginState, dataBounds }: { state: PluginS
 };
 
 export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
-  const [activeSample, setActiveSample] = React.useState<string>("custom");
+  const [activeSample, setActiveSample] = React.useState<string>("montrealBixi");
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [pendingUpload, setPendingUpload] = React.useState<{data: any[], headers: string[], name: string} | null>(null);
@@ -59,6 +59,20 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
   const [dataKey, setDataKey] = React.useState<number>(0);
 
   const [state, setState] = React.useState<PluginState>(() => control.getState() as PluginState);
+  
+  React.useEffect(() => {
+    // Load montreal bixi on first render if no data exists
+    if (!state.data?.flows?.length) {
+      // We will call the new loadSample method inside a timeout so it doesn't run before definition
+      setTimeout(() => {
+         const select = document.querySelector('select.flowmap-input') as HTMLSelectElement;
+         if (select) {
+            select.value = "montrealBixi";
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+         }
+      }, 50);
+    }
+  }, []);
   
   const dataBounds = React.useMemo(() => {
     if (!state.data || !state.data.flows || state.data.flows.length === 0) {
@@ -141,8 +155,7 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
     }
   };
 
-  const handleSampleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const sampleId = e.target.value;
+  const loadSample = async (sampleId: string) => {
     setActiveSample(sampleId);
     
     if (sampleId === "montrealBixi") {
@@ -172,8 +185,15 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
         setActiveSample("custom");
       }
     } else if (sampleId !== "custom" && sampleDatasets[sampleId]) {
+      const url = sampleDatasets[sampleId].url;
+      setFileName(sampleDatasets[sampleId].name);
+      setError("Loading " + sampleDatasets[sampleId].name + "...");
+      
       try {
-        const file = new File([sampleDatasets[sampleId]], `${sampleId}.csv`, { type: "text/csv" });
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Could not fetch sample dataset");
+        const blob = await response.blob();
+        const file = new File([blob], "sample.csv", { type: "text/csv" });
         const results = await loadFileData(file);
         const mapping = guessColumnMapping(results.headers);
         const { locations, flows } = mapSingleCsvToFlowmapData(results.data, mapping as ColumnMapping);
@@ -182,12 +202,20 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
         setDataKey(prev => prev + 1);
         control.setState({ data: { locations, flows }, timeFilter: undefined, volumeFilter: undefined });
       } catch (err: any) {
-        setError(err.message);
+        setError("Failed to load sample: " + err.message);
         setActiveSample("custom");
       }
-    } else if (sampleId === "custom") {
+    } else {
+      // Clear data for "custom"
+      setFileName(null);
+      setError(null);
       setPendingUpload(null);
+      control.setState({ data: { locations: [], flows: [] }, timeFilter: undefined, volumeFilter: undefined });
     }
+  };
+
+  const handleSampleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    loadSample(e.target.value);
   };
 
   const hasData = state.data != null && state.data.flows != null && state.data.locations != null;
