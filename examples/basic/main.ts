@@ -30,6 +30,27 @@ map.on('load', () => {
   // Add control to the map
   map.addControl(pluginControl, 'top-right');
 
+  // Load sample flowmap data automatically so there is a live demo
+  const sampleData = {
+    locations: [
+      { id: '1', name: 'New York', lat: 40.7128, lon: -74.0060 },
+      { id: '2', name: 'London', lat: 51.5074, lon: -0.1278 },
+      { id: '3', name: 'Tokyo', lat: 35.6762, lon: 139.6503 },
+      { id: '4', name: 'Sydney', lat: -33.8688, lon: 151.2093 }
+    ],
+    flows: [
+      { origin: '1', dest: '2', count: 2500, time: 0 },
+      { origin: '2', dest: '3', count: 1800, time: 0 },
+      { origin: '3', dest: '1', count: 1200, time: 0 },
+      { origin: '4', dest: '1', count: 3000, time: 0 },
+      { origin: '2', dest: '4', count: 900, time: 0 }
+    ]
+  };
+
+  setTimeout(() => {
+    pluginControl.setState({ data: sampleData });
+  }, 1000);
+
   // Add Globe control to the map
   map.addControl(new maplibregl.GlobeControl(), 'top-right');
 
