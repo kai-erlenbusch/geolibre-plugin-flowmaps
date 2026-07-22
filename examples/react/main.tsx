@@ -31,9 +31,13 @@ function App() {
     mapInstance.on('load', () => {
       setMap(mapInstance);
       
-      // Import PluginControl from core
       import('../../src/lib/core/PluginControl').then(({ PluginControl }) => {
-        const control = new PluginControl({ collapsed: true });
+        const control = new PluginControl({ 
+          collapsed: true,
+          fitBounds: (bbox) => {
+            mapInstance.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: 50, maxZoom: 11 });
+          }
+        });
         mapInstance.addControl(control, 'top-right');
         setPluginControl(control);
       });
