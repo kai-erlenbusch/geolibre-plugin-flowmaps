@@ -63,13 +63,9 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
   React.useEffect(() => {
     // Load montreal bixi on first render if no data exists
     if (!state.data?.flows?.length) {
-      // We will call the new loadSample method inside a timeout so it doesn't run before definition
+      // Small timeout to allow initial render to settle
       setTimeout(() => {
-         const select = document.querySelector('select.flowmap-input') as HTMLSelectElement;
-         if (select) {
-            select.value = "montrealBixi";
-            select.dispatchEvent(new Event('change', { bubbles: true }));
-         }
+        loadSample("montrealBixi");
       }, 50);
     }
   }, []);
