@@ -2,6 +2,7 @@ import maplibregl from 'maplibre-gl';
 import { PluginControl } from '../../src/index';
 import '../../src/index.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import Papa from 'papaparse';
 
 // Create map
 const map = new maplibregl.Map({
@@ -30,26 +31,38 @@ map.on('load', () => {
   // Add control to the map
   map.addControl(pluginControl, 'top-right');
 
-  // Load sample flowmap data automatically so there is a live demo
-  const sampleData = {
-    locations: [
-      { id: '1', name: 'New York', lat: 40.7128, lon: -74.0060 },
-      { id: '2', name: 'London', lat: 51.5074, lon: -0.1278 },
-      { id: '3', name: 'Tokyo', lat: 35.6762, lon: 139.6503 },
-      { id: '4', name: 'Sydney', lat: -33.8688, lon: 151.2093 }
-    ],
-    flows: [
-      { origin: '1', dest: '2', count: 2500, time: 1000 },
-      { origin: '2', dest: '3', count: 1800, time: 2000 },
-      { origin: '3', dest: '1', count: 1200, time: 3000 },
-      { origin: '4', dest: '1', count: 3000, time: 4000 },
-      { origin: '2', dest: '4', count: 900, time: 5000 }
-    ]
-  };
+  const locationsUrl = 'https://raw.githubusercontent.com/FlowmapBlue/flowmap.gl-data/main/BIXI-rides/output/locations.csv';
+  const flowsUrl = 'https://raw.githubusercontent.com/FlowmapBlue/flowmap.gl-data/main/BIXI-rides/output/flows-2021-10.csv';
 
-  setTimeout(() => {
-    pluginControl.setState({ data: sampleData });
-  }, 1000);
+  // Load sample BIXI Montreal data automatically
+  Promise.all([
+    fetch(locationsUrl).then(r => r.text()),
+    fetch(flowsUrl).then(r => r.text())
+  ]).then(([locationsCsv, flowsCsv]) => {
+    const locations = Papa.parse(locationsCsv, { header: true, dynamicTyping: true, skipEmptyLines: true }).data;
+    const flows = Papa.parse(flowsCsv, { header: true, dynamicTyping: true, skipEmptyLines: true }).data;
+
+    const processedFlows = flows.map((f: any) => ({
+      ...f,
+      time: f.time ? new Date(f.time).getTime() : undefined
+    }));
+
+    pluginControl.setState({ 
+      data: { 
+        locations: locations as any, 
+        flows: processedFlows as any
+      },
+      // Give a nice initial configuration for the BIXI dataset
+      opacity: 0.8,
+      fadeAmount: 20,
+      colorScheme: 'Teal',
+      flowLinesRenderingMode: 'lines',
+      locationsEnabled: true,
+      locationLabelsEnabled: false
+    });
+  }).catch(err => {
+    console.error('Failed to load BIXI dataset:', err);
+  });
 
   // Add Globe control to the map
   map.addControl(new maplibregl.GlobeControl(), 'top-right');
