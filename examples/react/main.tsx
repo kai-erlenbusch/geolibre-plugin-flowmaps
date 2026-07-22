@@ -11,7 +11,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 function App() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<Map | null>(null);
-  const { state, toggle } = usePluginState({ collapsed: false });
+  const [pluginControl, setPluginControl] = useState<any>(null);
 
   // Initialize the map
   useEffect(() => {
@@ -26,12 +26,17 @@ function App() {
 
     // Add navigation controls to top-right
     mapInstance.addControl(new maplibregl.NavigationControl(), 'top-right');
-
-    // Add fullscreen control to top-right (after navigation)
     mapInstance.addControl(new maplibregl.FullscreenControl(), 'top-right');
 
     mapInstance.on('load', () => {
       setMap(mapInstance);
+      
+      // Import PluginControl from core
+      import('../../src/lib/core/PluginControl').then(({ PluginControl }) => {
+        const control = new PluginControl({ collapsed: true });
+        mapInstance.addControl(control, 'top-right');
+        setPluginControl(control);
+      });
     });
 
     return () => {
@@ -39,44 +44,37 @@ function App() {
     };
   }, []);
 
-  const handleStateChange = (newState: typeof state) => {
-    console.log('Plugin state changed:', newState);
-  };
+  // Dynamically import the panel
+  const [FlowmapConfigPanel, setFlowmapConfigPanel] = useState<any>(null);
+  useEffect(() => {
+    import('../../src/lib/geolibre/right-panel').then((mod) => {
+      setFlowmapConfigPanel(() => mod.FlowmapConfigPanel);
+    });
+  }, []);
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-
-      {/* External toggle button */}
-      <button
-        onClick={toggle}
-        style={{
-          position: 'absolute',
-          top: 10,
-          left: 10,
-          zIndex: 1,
-          padding: '8px 16px',
-          background: '#4a90d9',
-          color: 'white',
-          border: 'none',
-          borderRadius: 4,
-          cursor: 'pointer',
-          fontWeight: 500,
-        }}
-      >
-        {state.collapsed ? 'Expand' : 'Collapse'} Panel
-      </button>
-
-      {/* Plugin control */}
-      {map && (
-        <PluginControlReact
-          map={map}
-          title="React Plugin"
-          collapsed={state.collapsed}
-          panelWidth={320}
-          onStateChange={handleStateChange}
-        />
-      )}
+    <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'row' }}>
+      <div style={{ flex: 1, position: 'relative' }}>
+        <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+      </div>
+      
+      {/* Plugin control panel sidebar */}
+      <div style={{ 
+        width: 350, 
+        height: '100%', 
+        backgroundColor: '#111', 
+        color: '#fff',
+        borderLeft: '1px solid #333',
+        overflowY: 'auto'
+      }}>
+        {pluginControl && FlowmapConfigPanel ? (
+          <div style={{ padding: '20px' }}>
+            <FlowmapConfigPanel control={pluginControl} />
+          </div>
+        ) : (
+          <div style={{ padding: '20px', color: '#888' }}>Loading panel...</div>
+        )}
+      </div>
     </div>
   );
 }

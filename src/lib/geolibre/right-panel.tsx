@@ -50,7 +50,7 @@ const LevaControls = ({ state, updatePluginState, dataBounds }: { state: PluginS
   );
 };
 
-function FlowmapConfigPanel({ control }: { control: PluginControl }) {
+export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
   const [activeSample, setActiveSample] = React.useState<string>("custom");
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
