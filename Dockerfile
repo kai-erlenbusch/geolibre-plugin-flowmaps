@@ -22,7 +22,7 @@ RUN npm run build && npm run build:examples
 FROM nginx:alpine
 
 # Copy built examples to nginx (served under /geolibre-plugin-template/ to match Vite base path)
-COPY --from=builder /app/dist-examples /usr/share/nginx/html/geolibre-plugin-template
+COPY --from=builder /app/dist-examples /usr/share/nginx/html/geolibre-plugin-flowmaps
 
 # Copy custom nginx config
 RUN echo 'server { \
@@ -31,12 +31,12 @@ RUN echo 'server { \
     root /usr/share/nginx/html; \
     index index.html; \
     \
-    location /geolibre-plugin-template/ { \
-        try_files $uri $uri/ /geolibre-plugin-template/index.html; \
+    location /geolibre-plugin-flowmaps/ { \
+        try_files $uri $uri/ /geolibre-plugin-flowmaps/index.html; \
     } \
     \
     location = / { \
-        return 302 /geolibre-plugin-template/; \
+        return 302 /geolibre-plugin-flowmaps/; \
     } \
 }' > /etc/nginx/conf.d/default.conf
 
@@ -52,7 +52,7 @@ echo ""\n\
 echo "  Server running on port 80"\n\
 echo ""\n\
 echo "  If you ran: docker run -p 8080:80 ..."\n\
-echo "  Open: http://localhost:8080/geolibre-plugin-template/"\n\
+echo "  Open: http://localhost:8080/geolibre-plugin-flowmaps/"\n\
 echo ""\n\
 echo "======================================================"\n\
 echo ""\n\

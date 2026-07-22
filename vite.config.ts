@@ -49,7 +49,7 @@ export default defineConfig({
         },
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === "style.css")
-            return "geolibre-plugin-template.css";
+            return "geolibre-plugin-flowmaps.css";
           return assetInfo.name || "";
         },
       },

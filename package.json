@@ -27,7 +27,7 @@
         "default": "./dist/react.cjs"
       }
     },
-    "./style.css": "./dist/geolibre-plugin-template.css"
+    "./style.css": "./dist/geolibre-plugin-flowmaps.css"
   },
   "files": [
     "dist",
