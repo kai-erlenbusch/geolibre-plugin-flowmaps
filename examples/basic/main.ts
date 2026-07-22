@@ -22,7 +22,7 @@ map.on('load', () => {
   // Create the plugin control with custom options
   // Set collapsed: true to start with just the 29x29 button (like navigation control)
   const pluginControl = new PluginControl({
-    title: 'My Plugin',
+    title: 'Flowmaps',
     collapsed: false,
     panelWidth: 300,
   });
