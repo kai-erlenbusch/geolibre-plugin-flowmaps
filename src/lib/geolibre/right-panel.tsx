@@ -181,15 +181,10 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
         setActiveSample("custom");
       }
     } else if (sampleId !== "custom" && sampleDatasets[sampleId]) {
-      const url = sampleDatasets[sampleId].url;
-      setFileName(sampleDatasets[sampleId].name);
-      setError("Loading " + sampleDatasets[sampleId].name + "...");
-      
       try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Could not fetch sample dataset");
-        const blob = await response.blob();
-        const file = new File([blob], "sample.csv", { type: "text/csv" });
+        setFileName(sampleId);
+        setError("Loading " + sampleId + "...");
+        const file = new File([sampleDatasets[sampleId]], `${sampleId}.csv`, { type: "text/csv" });
         const results = await loadFileData(file);
         const mapping = guessColumnMapping(results.headers);
         const { locations, flows } = mapSingleCsvToFlowmapData(results.data, mapping as ColumnMapping);
