@@ -58,7 +58,6 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
   const [error, setError] = React.useState<string | null>(null);
   const [pendingUpload, setPendingUpload] = React.useState<{data: any[], headers: string[], name: string} | null>(null);
   const [mapping, setMapping] = React.useState<Partial<ColumnMapping>>({});
-  const [dataKey, setDataKey] = React.useState<number>(0);
 
   const [state, setState] = React.useState<PluginState>(() => control.getState() as PluginState);
   
@@ -195,7 +194,6 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
         if (activeSampleRef.current !== sampleId) return;
         setError(null);
         setPendingUpload(null);
-        setDataKey(prev => prev + 1);
         control.setState({ data: { locations, flows }, timeFilter: undefined, volumeFilter: undefined });
       } catch (err: any) {
         if (activeSampleRef.current !== sampleId) return;
@@ -213,7 +211,6 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
         if (activeSampleRef.current !== sampleId) return;
         setError(null);
         setPendingUpload(null);
-        setDataKey(prev => prev + 1);
         control.setState({ data: { locations, flows }, timeFilter: undefined, volumeFilter: undefined });
       } catch (err: any) {
         if (activeSampleRef.current !== sampleId) return;
@@ -340,7 +337,7 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
 
       {hasData && !pendingUpload && (
         <div style={{ flex: 1, overflow: 'auto' }}>
-          <LevaControls key={dataKey} state={state} updatePluginState={updatePluginState} dataBounds={dataBounds} />
+          <LevaControls key={state.data?.locations?.length ? `data-${state.data.locations.length}-${state.data.flows?.length}` : 'empty'} state={state} updatePluginState={updatePluginState} dataBounds={dataBounds} />
         </div>
       )}
 
