@@ -482,7 +482,7 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     toggleBtn.setAttribute('aria-label', this._options.title);
     toggleBtn.innerHTML = `
       <span class="plugin-control-icon">
-        <svg viewBox="0 0 24 24" width="22" height="22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" width="22" height="22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke="currentColor">
           <rect x="3" y="3" width="7" height="7" rx="1"/>
           <rect x="14" y="3" width="7" height="7" rx="1"/>
           <rect x="3" y="14" width="7" height="7" rx="1"/>
