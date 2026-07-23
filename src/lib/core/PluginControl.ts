@@ -251,11 +251,12 @@ export class PluginControl implements IControl, DeepLinkConsumer {
       const { data, ...config } = this._state;
 
       let filteredFlows = data.flows;
-      if (config.volumeFilter) {
-        filteredFlows = filteredFlows.filter((f: any) => f.count >= config.volumeFilter![0] && f.count <= config.volumeFilter![1]);
-      }
-      if (config.timeFilter) {
-        filteredFlows = filteredFlows.filter((f: any) => f.time >= config.timeFilter![0] && f.time <= config.timeFilter![1]);
+      if (config.volumeFilter || config.timeFilter) {
+        filteredFlows = filteredFlows.filter((f: any) => {
+          const passVolume = !config.volumeFilter || (f.count >= config.volumeFilter[0] && f.count <= config.volumeFilter[1]);
+          const passTime = !config.timeFilter || (f.time >= config.timeFilter[0] && f.time <= config.timeFilter[1]);
+          return passVolume && passTime;
+        });
       }
 
       const layerProps = {

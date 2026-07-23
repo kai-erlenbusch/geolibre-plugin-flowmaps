@@ -4,6 +4,9 @@ import type { GeoLibreNativeLayerRegistration } from '../geolibre/host-api';
 /**
  * Options for configuring the PluginControl
  */
+export const COLOR_SCHEMES = ['Teal', 'Heatmap', 'Magenta', 'Ocean'] as const;
+export type ColorScheme = typeof COLOR_SCHEMES[number];
+
 export interface PluginControlOptions {
   /**
    * Whether the control panel should start collapsed (showing only the toggle button)
@@ -82,7 +85,7 @@ export interface PluginState {
    */
   data?: any;
 
-  colorScheme: string;
+  colorScheme: ColorScheme;
   highlightColor: string;
   
   // UI configurations

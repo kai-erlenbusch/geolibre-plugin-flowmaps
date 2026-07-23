@@ -3,7 +3,8 @@ import { createRoot, Root } from "react-dom/client";
 import type { GeoLibreAppAPI, GeoLibreControl } from "./host-api";
 import type { PluginControl } from "../core/PluginControl";
 import { sampleDatasets } from "../../samples";
-import type { PluginState } from "../core/types";
+import type { PluginState, ColorScheme } from "../core/types";
+import { COLOR_SCHEMES } from "../core/types";
 import { mapSingleCsvToFlowmapData, guessColumnMapping, ColumnMapping } from "../utils/csv-parser";
 import { loadFileData } from "../utils/file-loader";
 import { Leva, useControls, folder, useCreateStore } from "leva";
@@ -17,7 +18,7 @@ const LevaControls = ({ state, updatePluginState, dataBounds }: { state: PluginS
   useControls(() => ({
     Controls: folder({
       darkMode: { value: state.darkMode, onChange: (v) => updatePluginState({ darkMode: v }) },
-      colorScheme: { options: ['Teal', 'Heatmap', 'Magenta', 'Ocean'], value: state.colorScheme, onChange: (v) => updatePluginState({ colorScheme: v }) },
+      colorScheme: { options: [...COLOR_SCHEMES], value: state.colorScheme, onChange: (v) => updatePluginState({ colorScheme: v as ColorScheme }) },
       highlightColor: { value: state.highlightColor, onChange: (v) => updatePluginState({ highlightColor: v }) },
       animationEnabled: { value: state.animationEnabled, onChange: (v) => updatePluginState({ animationEnabled: v }) },
       flowLineThicknessScale: { value: state.flowLineThicknessScale, min: 0, max: 10, step: 0.1, onChange: (v) => updatePluginState({ flowLineThicknessScale: v }) },
@@ -87,11 +88,26 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
 
 
   React.useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let latestState: PluginState | null = null;
+    
     const handler = (event: any) => {
-      setState(event.state as PluginState);
+      latestState = event.state as PluginState;
+      if (!timeoutId) {
+        timeoutId = setTimeout(() => {
+          if (latestState) {
+            setState(latestState);
+            latestState = null;
+          }
+          timeoutId = null;
+        }, 100);
+      }
     };
     control.on('statechange', handler);
-    return () => control.off('statechange', handler);
+    return () => {
+      control.off('statechange', handler);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [control]);
 
   const updateTimeoutRef = React.useRef<number | null>(null);
@@ -162,10 +178,12 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
         let response = await fetch('/plugins/geolibre-plugin-flowmaps/dist/montreal-bixi-flat.csv');
         if (!response.ok) {
            response = await fetch('/plugins/geolibre-plugin-flowmaps/montreal-bixi-flat.csv');
-           if (!response.ok) {
-              response = await fetch('/geolibre-plugin-flowmaps/montreal-bixi-flat.csv');
-              if (!response.ok) throw new Error("Could not fetch local demo file");
-           }
+        }
+        if (!response.ok) {
+           response = await fetch('/geolibre-plugin-flowmaps/montreal-bixi-flat.csv');
+        }
+        if (!response.ok) {
+           throw new Error("Could not fetch local demo file");
         }
         const blob = await response.blob();
         const file = new File([blob], "montreal-bixi-flat.csv", { type: "text/csv" });
@@ -273,9 +291,10 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
               <div key={key} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <label style={{fontSize: 12}}>{label}</label>
                 <select 
+                  className="select-input"
                   value={(mapping as any)[key] || ""} 
-                  onChange={e => setMapping({...mapping, [key]: e.target.value})}
-                  style={{width: '60%', padding: 4}}
+                  onChange={(e) => setMapping(prev => ({...prev, [key]: e.target.value}))}
+                  style={{width: 150, padding: 4, fontSize: 12}}
                 >
                   <option value="">{key === 'count' ? '(None - Default to 1)' : key === 'time' ? '(None)' : '(Select)'}</option>
                   {pendingUpload.headers.map(h => <option key={h} value={h}>{h}</option>)}

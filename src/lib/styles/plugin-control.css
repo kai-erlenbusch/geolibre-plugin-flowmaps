@@ -77,7 +77,7 @@
 }
 
 /* Toggle button - 29x29 to match navigation control */
-.plugin-control-toggle {
+.maplibregl-ctrl-group button.plugin-control-toggle {
   background: none;
   border: none;
   padding: 0;

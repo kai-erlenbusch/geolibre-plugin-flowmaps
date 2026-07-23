@@ -34,6 +34,10 @@ export function guessColumnMapping(headers: string[]): Partial<ColumnMapping> {
   mapping.destName = findMatch(/^(dest|destination|end|target).*name/) || findMatch(/^name.*(dest|end|target)/);
   mapping.time = findMatch(/^(time|timestamp|date|datetime|hour)$/) || findMatch(/time|date/);
   
+  if (!mapping.origin || !mapping.dest || !mapping.originLat || !mapping.originLon || !mapping.destLat || !mapping.destLon) {
+    throw new Error("Could not determine required columns (origin, dest, and their lat/lon coordinates) from CSV headers. Please ensure your CSV has appropriately named columns.");
+  }
+  
   return mapping;
 }
 
