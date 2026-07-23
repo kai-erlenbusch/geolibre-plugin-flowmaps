@@ -53,6 +53,7 @@ const LevaControls = ({ state, updatePluginState, dataBounds }: { state: PluginS
 
 export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
   const [activeSample, setActiveSample] = React.useState<string>("montrealBixi");
+  const activeSampleRef = React.useRef("montrealBixi");
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [pendingUpload, setPendingUpload] = React.useState<{data: any[], headers: string[], name: string} | null>(null);
@@ -169,6 +170,7 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
 
   const loadSample = async (sampleId: string) => {
     setActiveSample(sampleId);
+    activeSampleRef.current = sampleId;
     
     if (sampleId === "montrealBixi") {
       setFileName("Montreal BIXI Demo");
@@ -190,11 +192,13 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
         const results = await loadFileData(file);
         const mapping = guessColumnMapping(results.headers);
         const { locations, flows } = mapSingleCsvToFlowmapData(results.data, mapping as ColumnMapping);
+        if (activeSampleRef.current !== sampleId) return;
         setError(null);
         setPendingUpload(null);
         setDataKey(prev => prev + 1);
         control.setState({ data: { locations, flows }, timeFilter: undefined, volumeFilter: undefined });
       } catch (err: any) {
+        if (activeSampleRef.current !== sampleId) return;
         setError("Failed to load Montreal BIXI: " + err.message);
         setActiveSample("custom");
       }
@@ -206,15 +210,18 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
         const results = await loadFileData(file);
         const mapping = guessColumnMapping(results.headers);
         const { locations, flows } = mapSingleCsvToFlowmapData(results.data, mapping as ColumnMapping);
+        if (activeSampleRef.current !== sampleId) return;
         setError(null);
         setPendingUpload(null);
         setDataKey(prev => prev + 1);
         control.setState({ data: { locations, flows }, timeFilter: undefined, volumeFilter: undefined });
       } catch (err: any) {
+        if (activeSampleRef.current !== sampleId) return;
         setError("Failed to load sample: " + err.message);
         setActiveSample("custom");
       }
     } else {
+      if (activeSampleRef.current !== sampleId) return;
       // Clear data for "custom"
       setFileName(null);
       setError(null);

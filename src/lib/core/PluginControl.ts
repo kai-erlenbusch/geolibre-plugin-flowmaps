@@ -172,21 +172,6 @@ export class PluginControl implements IControl, DeepLinkConsumer {
     
     if (dataChanged && this._map && this._state.data) {
       this._fitToData();
-      
-      // Unmount timeline immediately to prevent stale intervals from polluting the new state
-      if (this._timelineRoot) {
-        this._timelineRoot.render(null);
-      }
-      if (this._timelineContainer) {
-        this._timelineContainer.style.display = 'none';
-      }
-      
-      // Delay initial render slightly to ensure map bounds have started changing
-      setTimeout(() => {
-        this._updateFlowmapLayer();
-        this._renderTimeline();
-      }, 200);
-      return;
     }
     
     this._updateFlowmapLayer();
@@ -198,8 +183,10 @@ export class PluginControl implements IControl, DeepLinkConsumer {
       this._timelineContainer.style.display = 'block';
     }
     if (this._timelineRoot) {
+      const dataKey = (this._state.data as any)?.loadedUrl || (this._state.data ? this._state.data.locations.length : "empty");
       this._timelineRoot.render(
         React.createElement(TimelineOverlay, {
+          key: dataKey,
           state: this.getState(),
           updatePluginState: (updates: Partial<PluginState>) => this.setState(updates)
         })
@@ -254,7 +241,7 @@ export class PluginControl implements IControl, DeepLinkConsumer {
       if (config.volumeFilter || config.timeFilter) {
         filteredFlows = filteredFlows.filter((f: any) => {
           const passVolume = !config.volumeFilter || (f.count >= config.volumeFilter[0] && f.count <= config.volumeFilter[1]);
-          const passTime = !config.timeFilter || (f.time >= config.timeFilter[0] && f.time <= config.timeFilter[1]);
+          const passTime = !config.timeFilter || (Number(f.time) >= config.timeFilter[0] && Number(f.time) <= config.timeFilter[1]);
           return passVolume && passTime;
         });
       }
@@ -290,7 +277,7 @@ export class PluginControl implements IControl, DeepLinkConsumer {
         getFlowOriginId: (flow: any) => String(flow.origin),
         getLocationName: (loc: any) => loc.name || String(loc.id),
         getFlowDestId: (flow: any) => String(flow.dest),
-        getFlowMagnitude: (flow: any) => Number(flow.count || 1),
+        getFlowMagnitude: (flow: any) => Number(flow.count ?? 1),
         onHover: (info: any) => this._onHover(info),
       };
 
