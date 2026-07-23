@@ -245,6 +245,14 @@ export class PluginControl implements IControl, DeepLinkConsumer {
           return passVolume && passTime;
         });
       }
+      
+      console.log('Flowmap Debug:', {
+        totalFlows: data.flows.length,
+        filteredFlows: filteredFlows.length,
+        volumeFilter: config.volumeFilter,
+        timeFilter: config.timeFilter,
+        sampleFlow: filteredFlows[0]
+      });
 
       const layerProps = {
         id: 'flowmap-layer',

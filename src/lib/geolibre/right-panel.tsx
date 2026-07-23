@@ -28,7 +28,7 @@ const LevaControls = ({ state, updatePluginState, dataBounds }: { state: PluginS
       locationLabelsEnabled: { value: state.locationLabelsEnabled, onChange: (v) => updatePluginState({ locationLabelsEnabled: v }) },
       flowEndpointsInViewportMode: { options: ['any', 'both', 'none'], value: state.flowEndpointsInViewportMode, onChange: (v) => updatePluginState({ flowEndpointsInViewportMode: v }) },
       volumeFilter: { value: state.volumeFilter || [dataBounds.minCount, dataBounds.maxCount], min: dataBounds.minCount, max: dataBounds.maxCount, step: 1, onChange: (v) => updatePluginState({ volumeFilter: v as [number, number] }) },
-      maxTopFlowsDisplayNum: { value: state.maxTopFlowsDisplayNum, min: 0, max: dataBounds.totalFlows, step: 100, onChange: (v) => updatePluginState({ maxTopFlowsDisplayNum: v }) },
+      maxTopFlowsDisplayNum: { value: state.maxTopFlowsDisplayNum, min: 0, max: Math.max(5000, dataBounds.totalFlows), step: 10, onChange: (v) => updatePluginState({ maxTopFlowsDisplayNum: v }) },
       opacity: { value: state.opacity, min: 0, max: 1, step: 0.05, onChange: (v) => updatePluginState({ opacity: v }) },
     }),
     Fade: folder({
