@@ -337,7 +337,7 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
 
       {hasData && !pendingUpload && (
         <div style={{ flex: 1, overflow: 'auto' }}>
-          <LevaControls key={state.data?.locations?.length ? `data-${state.data.locations.length}-${state.data.flows?.length}` : 'empty'} state={state} updatePluginState={updatePluginState} dataBounds={dataBounds} />
+          <LevaControls key={state.data?.locations?.[0]?.id ? `data-${state.data.locations[0].id}` : 'empty'} state={state} updatePluginState={updatePluginState} dataBounds={dataBounds} />
         </div>
       )}
 
