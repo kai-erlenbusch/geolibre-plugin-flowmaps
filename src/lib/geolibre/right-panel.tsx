@@ -176,15 +176,9 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
       setError("Loading Montreal BIXI data... this might take a moment.");
       
       try {
-        let response = await fetch('/plugins/geolibre-plugin-flowmaps/dist/montreal-bixi-flat.csv');
+        const response = await fetch('https://data.source.coop/giswqs/opengeos/montreal-bixi-flat.csv');
         if (!response.ok) {
-           response = await fetch('/plugins/geolibre-plugin-flowmaps/montreal-bixi-flat.csv');
-        }
-        if (!response.ok) {
-           response = await fetch('/geolibre-plugin-flowmaps/montreal-bixi-flat.csv');
-        }
-        if (!response.ok) {
-           throw new Error("Could not fetch local demo file");
+           throw new Error("Could not fetch remote demo file from source.coop");
         }
         const blob = await response.blob();
         const file = new File([blob], "montreal-bixi-flat.csv", { type: "text/csv" });

@@ -20,24 +20,24 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // `publicDir: false` so Vite does not also copy unrelated public/ files (e.g.
 // robots.txt) into the plugin bundle.
 //
-// import { cp, rm } from "node:fs/promises";
-// import type { Plugin } from "vite";
-//
-// const ASSET_SRC = resolve(__dirname, "public/sample-data");
-// const ASSET_DEST = resolve(__dirname, "geolibre-plugin/dist/sample-data");
-//
-// function bundlePluginAssets(): Plugin {
-//   return {
-//     name: "geolibre-plugin:bundle-assets",
-//     async closeBundle() {
-//       await rm(ASSET_DEST, { recursive: true, force: true });
-//       await cp(ASSET_SRC, ASSET_DEST, { recursive: true });
-//     },
-//   };
-// }
+import { cp, rm } from "node:fs/promises";
+import type { Plugin } from "vite";
+
+const ASSET_SRC = resolve(__dirname, "public");
+const ASSET_DEST = resolve(__dirname, "geolibre-plugin/dist");
+
+function bundlePluginAssets(): Plugin {
+  return {
+    name: "geolibre-plugin:bundle-assets",
+    async closeBundle() {
+      // Just copy the public folder contents to dist
+      await cp(ASSET_SRC, ASSET_DEST, { recursive: true });
+    },
+  };
+}
 
 export default defineConfig({
-  // publicDir: false, // enable with the bundlePluginAssets() recipe above
+  publicDir: false, // enable with the bundlePluginAssets() recipe above
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
@@ -60,6 +60,7 @@ export default defineConfig({
       external: [],
       output: {
         assetFileNames: () => "style.css",
+        inlineDynamicImports: true,
       },
     },
     cssCodeSplit: false,
@@ -67,12 +68,22 @@ export default defineConfig({
     minify: false,
   },
   plugins: [
+    bundlePluginAssets(),
     {
       name: "remove-deck-version-check",
       transform(code, id) {
         if (code.includes("multiple versions detected")) {
           // completely remove the throw statement
           return code.replace(/throw new Error\([\s\S]*?multiple versions detected[\s\S]*?\);/g, "console.warn('version check bypassed');");
+        }
+      }
+    },
+    {
+      name: "patch-node-dom",
+      transform(code, id) {
+        if (id.includes("hammerjs") || id.includes("hammer.js") || id.includes("index.mjs")) {
+          return "if (typeof window === 'undefined') { globalThis.window = globalThis; }\n" + 
+                 "if (typeof document === 'undefined') { const makeProxy = (name) => new Proxy(function(){}, { get: (target, prop) => { if (prop === 'length') return 0; if (prop === 'cssRules') return makeProxy('cssRules'); if (prop === 'sheet') return makeProxy('sheet'); if (prop === 'appendChild') return () => makeProxy('node'); if (prop === 'createElement') return () => makeProxy('node'); if (prop === 'setAttribute') return () => {}; if (prop === 'insertRule') return () => 0; if (prop === 'head') return makeProxy('head'); if (prop === 'style') return makeProxy('style'); if (prop === Symbol.toPrimitive) return () => name; if (prop === 'then') return undefined; return makeProxy(prop); }, apply: () => makeProxy('apply'), construct: () => makeProxy('construct') }); globalThis.document = makeProxy('document'); }\n" + code;
         }
       }
     }
