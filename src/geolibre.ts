@@ -11,12 +11,15 @@ export const plugin: GeoLibrePlugin<any> = {
   name: "Flowmaps.gl",
   version: "0.1.0",
   urlParameterNames: [PLUGIN_DATA_PARAM],
-  async activate(app) {
+  activate(app: GeoLibreAppAPI<any>) {
     if (!pluginInstance) {
-      const { FlowmapsPluginHost } = await import("./host-impl");
-      pluginInstance = new FlowmapsPluginHost();
+      import("./host-impl").then(({ FlowmapsPluginHost }) => {
+        pluginInstance = new FlowmapsPluginHost();
+        pluginInstance.activate(app);
+      });
+    } else {
+      pluginInstance.activate(app);
     }
-    await pluginInstance.activate(app);
   },
   handleUrlParameters(app, params) {
     if (pluginInstance) pluginInstance.handleUrlParameters(app, params);

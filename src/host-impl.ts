@@ -1,6 +1,6 @@
 import { PluginControl } from "./lib/core/PluginControl";
 import type { PluginState } from "./lib/core/types";
-import { DEFAULT_PLUGIN_STATE } from "./lib/core/types";
+import { DEFAULT_PLUGIN_STATE, COLOR_SCHEMES } from "./lib/core/types";
 import type { GeoLibreAppAPI, GeoLibreMapControlPosition } from "./lib/geolibre/host-api";
 import { registerFlowmapRightPanel } from "./lib/geolibre/right-panel";
 import { maybeHandleDeepLink } from "./lib/utils/deep-link";
@@ -46,7 +46,7 @@ export class FlowmapsPluginHost {
     this.disposeRightPanel = registerFlowmapRightPanel(app, this.control);
   }
 
-  handleUrlParameters(app: AppAPI, params: URLSearchParams) {
+  handleUrlParameters(_app: AppAPI, params: URLSearchParams) {
     if (this.control) return maybeHandleDeepLink(this.control, params);
   }
 
@@ -67,7 +67,7 @@ export class FlowmapsPluginHost {
     return this.control?.getState() ?? this.pendingState ?? undefined;
   }
 
-  applyProjectState(app: AppAPI, state: any) {
+  applyProjectState(_app: AppAPI, state: any) {
     if (!this.isPluginState(state)) return false;
     this.pendingState = state;
     this.control?.setState(state);
@@ -79,7 +79,7 @@ export class FlowmapsPluginHost {
     if ("collapsed" in candidate && typeof candidate.collapsed !== "boolean") return false;
     if ("panelWidth" in candidate && typeof candidate.panelWidth !== "number") return false;
     if ("data" in candidate && (typeof candidate.data !== "object" || candidate.data === null || Array.isArray(candidate.data))) return false;
-    if ("colorScheme" in candidate && !['Teal', 'Heatmap', 'Magenta', 'Ocean'].includes(candidate.colorScheme as string)) return false;
+    if ("colorScheme" in candidate && !COLOR_SCHEMES.includes(candidate.colorScheme as any)) return false;
     if ("flowLineThicknessScale" in candidate && typeof candidate.flowLineThicknessScale !== "number") return false;
     if ("opacity" in candidate && typeof candidate.opacity !== "number") return false;
     if ("animationEnabled" in candidate && typeof candidate.animationEnabled !== "boolean") return false;

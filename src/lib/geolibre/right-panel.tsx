@@ -46,14 +46,31 @@ const LevaControls = ({ state, updatePluginState, dataBounds }: { state: PluginS
   return (
     <div style={{ marginTop: 10, position: 'relative', zIndex: 1, paddingBottom: 20 }}>
       {/* @ts-ignore - Leva store prop typing is missing in older versions but works in runtime */}
-      <Leva store={store} flat fill titleBar={false} hideCopyButton />
+      <Leva 
+        {...({store} as any)}
+        flat fill titleBar={false} hideCopyButton 
+        theme={{
+          colors: {
+            elevation1: 'var(--pc-bg, #1f2937)',
+            elevation2: 'var(--pc-input-bg, #111827)',
+            elevation3: 'var(--pc-hover-bg, rgba(255,255,255,0.08))',
+            accent1: 'var(--pc-accent, #4a90d9)',
+            accent2: 'var(--pc-accent-hover, #5a9fe5)',
+            accent3: 'var(--pc-accent-ring, rgba(74,144,217,0.25))',
+            highlight1: 'var(--pc-text, #e5e7eb)',
+            highlight2: 'var(--pc-muted, #9ca3af)',
+            highlight3: 'var(--pc-label, #cbd5e1)',
+            vivid1: 'var(--pc-accent, #4a90d9)',
+          }
+        }}
+      />
     </div>
   );
 };
 
 export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
-  const [activeSample, setActiveSample] = React.useState<string>("montrealBixi");
-  const activeSampleRef = React.useRef("montrealBixi");
+  const [activeSample, setActiveSample] = React.useState<string>("custom");
+  const activeSampleRef = React.useRef("custom");
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [pendingUpload, setPendingUpload] = React.useState<{data: any[], headers: string[], name: string} | null>(null);
@@ -62,11 +79,11 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
   const [state, setState] = React.useState<PluginState>(() => control.getState() as PluginState);
   
   React.useEffect(() => {
-    // Load montreal bixi on first render if no data exists
+    // Load custom on first render if no data exists
     if (!state.data?.flows?.length) {
       // Small timeout to allow initial render to settle
       setTimeout(() => {
-        loadSample("montrealBixi");
+        loadSample("custom");
       }, 50);
     }
   }, []);
@@ -314,7 +331,6 @@ export function FlowmapConfigPanel({ control }: { control: PluginControl }) {
                   setError("No valid flows found with this mapping.");
                 } else {
                   setFileName(pendingUpload.name);
-                  setDataKey(prev => prev + 1);
                   control.setState({ data: { locations, flows }, timeFilter: undefined, volumeFilter: undefined });
                   setPendingUpload(null);
                   setError(null);
