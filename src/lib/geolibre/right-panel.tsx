@@ -57,10 +57,14 @@ const LevaControls = ({ state, updatePluginState, dataBounds }: { state: PluginS
             accent1: 'var(--pc-accent, #4a90d9)',
             accent2: 'var(--pc-accent-hover, #5a9fe5)',
             accent3: 'var(--pc-accent-ring, rgba(74,144,217,0.25))',
-            highlight1: 'var(--pc-text, #e5e7eb)',
+            highlight1: 'var(--pc-border, #374151)',
             highlight2: 'var(--pc-muted, #9ca3af)',
-            highlight3: 'var(--pc-label, #cbd5e1)',
+            highlight3: 'var(--pc-text, #e5e7eb)',
             vivid1: 'var(--pc-accent, #4a90d9)',
+            folderWidgetColor: 'var(--pc-muted, #9ca3af)',
+            folderTextColor: 'var(--pc-text, #e5e7eb)',
+            toolTipBackground: 'var(--pc-text, #e5e7eb)',
+            toolTipText: 'var(--pc-bg, #1f2937)'
           }
         }}
       />
