@@ -31,7 +31,11 @@ function bundlePluginAssets(): Plugin {
     name: "geolibre-plugin:bundle-assets",
     async closeBundle() {
       // Just copy the public folder contents to dist
-      await cp(ASSET_SRC, ASSET_DEST, { recursive: true });
+      try {
+        await cp(ASSET_SRC, ASSET_DEST, { recursive: true });
+      } catch (e: any) {
+        if (e.code !== 'ENOENT') throw e;
+      }
     },
   };
 }
@@ -65,7 +69,6 @@ export default defineConfig({
     },
     cssCodeSplit: false,
     sourcemap: false,
-    minify: false,
   },
   plugins: [
     bundlePluginAssets(),
