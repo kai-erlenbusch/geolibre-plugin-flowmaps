@@ -1,5 +1,3 @@
-import Papa from "papaparse";
-
 export async function loadFileData(file: File): Promise<{ data: any[], headers: string[], name: string }> {
   const ext = file.name.split('.').pop()?.toLowerCase() || '';
 
@@ -19,6 +17,7 @@ export async function loadFileData(file: File): Promise<{ data: any[], headers: 
 }
 
 async function loadCSV(file: File): Promise<{ data: any[], headers: string[], name: string }> {
+  const Papa = (await import("papaparse")).default || await import("papaparse");
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
       header: true,

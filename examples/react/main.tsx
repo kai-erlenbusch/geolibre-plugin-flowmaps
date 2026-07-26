@@ -56,6 +56,9 @@ function App() {
     });
   }, []);
 
+  // Detect system theme for the test harness sidebar
+  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'row' }}>
       <div style={{ flex: 1, position: 'relative' }}>
@@ -66,9 +69,9 @@ function App() {
       <div style={{ 
         width: 350, 
         height: '100%', 
-        backgroundColor: '#111', 
-        color: '#fff',
-        borderLeft: '1px solid #333',
+        backgroundColor: isDark ? '#111' : '#f9fafb', 
+        color: isDark ? '#fff' : '#111827',
+        borderLeft: isDark ? '1px solid #333' : '1px solid #e5e7eb',
         overflowY: 'auto'
       }}>
         {pluginControl && FlowmapConfigPanel ? (

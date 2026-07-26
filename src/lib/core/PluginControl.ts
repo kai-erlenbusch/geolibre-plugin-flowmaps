@@ -227,6 +227,7 @@ export class PluginControl implements IControl, DeepLinkConsumer {
         }
       } catch (err: any) {
         console.error("GeoLibre Flowmaps: Error flying to bounds:", err);
+        this._setStatus("Error navigating to dataset bounds.");
       }
     }
   }

@@ -1,5 +1,7 @@
 # Flowmaps.gl Plugin for GeoLibre
 
+![Flowmaps.gl Plugin Demo](assets/demo.png)
+
 A powerful plugin for visualizing origin-destination data in GeoLibre using [flowmap.gl](https://flowmap.gl/). This plugin allows you to seamlessly explore mobility, migration, and other flow data with high-performance WebGL rendering.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
